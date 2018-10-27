@@ -1,0 +1,26 @@
+{
+  "name": "ubai-smart-contract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/platinum-fund/Ubai-smart-contract.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/platinum-fund/Ubai-smart-contract/issues"
+  },
+  "homepage": "https://github.com/platinum-fund/Ubai-smart-contract#readme",
+  "dependencies": {
+    "truffle": "^4.1.14",
+    "web3": "^1.0.0-beta.36"
+  }
+}
