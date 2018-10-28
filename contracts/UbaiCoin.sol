@@ -25,7 +25,7 @@ contract Ownable {
   /**
    * @return the address of the owner.
    */
-  function owner() public view returns(address) {
+  function owner() public view returns (address) {
     return _owner;
   }
 
@@ -40,7 +40,7 @@ contract Ownable {
   /**
    * @return true if `msg.sender` is the owner of the contract.
    */
-  function isOwner() public view returns(bool) {
+  function isOwner() public view returns (bool) {
     return msg.sender == _owner;
   }
 
@@ -83,16 +83,13 @@ interface IERC20 {
 
   function balanceOf(address who) external view returns (uint256);
 
-  function allowance(address owner, address spender)
-    external view returns (uint256);
+  function allowance(address owner, address spender) external view returns (uint256);
 
   function transfer(address to, uint256 value) external returns (bool);
 
-  function approve(address spender, uint256 value)
-    external returns (bool);
+  function approve(address spender, uint256 value) external returns (bool);
 
-  function transferFrom(address from, address to, uint256 value)
-    external returns (bool);
+  function transferFrom(address from, address to, uint256 value) external returns (bool);
 
   event Transfer(
     address indexed from,
@@ -134,7 +131,8 @@ library SafeMath {
   * @dev Integer division of two numbers truncating the quotient, reverts on division by zero.
   */
   function div(uint256 a, uint256 b) internal pure returns (uint256) {
-    require(b > 0); // Solidity only automatically asserts when dividing by 0
+    require(b > 0);
+    // Solidity only automatically asserts when dividing by 0
     uint256 c = a / b;
     // assert(a == b * c + a % b); // There is no case in which this doesn't hold
 
@@ -181,24 +179,29 @@ library SafeMath {
 contract ERC20 is IERC20, Ownable {
   using SafeMath for uint256;
 
-  mapping (address => uint256) private _balances;
-  mapping (address => bool) private _frozen;
+  mapping(address => uint256) private _balances;
+  mapping(address => bool) private _frozen;
 
-  mapping (address => mapping (address => uint256)) private _allowed;
+  mapping(address => mapping(address => uint256)) private _allowed;
 
   uint256 private _totalSupply = 100000000000000000000000000;
 
   constructor() public {
     _balances[address(this)] = _totalSupply;
     emit Transfer(address(0x0), address(this), _totalSupply);
-  } 
+  }
 
+  /**
+  * @param _address The address to be frozen/unfrozen.
+  * @param _boolean The flag to set frozen if true and unfrozen if false.
+  */
   function freeze(address _address, bool _boolean) external onlyOwner {
     _frozen[_address] = _boolean;
   }
 
   /**
-   * @return the frozen status of address.
+   * @param owner The address to be checked.
+   * @return A bool representing of the address state frozen if true and unfrozen if false.
    */
   function isFrozen(address owner) public view returns (bool) {
     return _frozen[owner];
@@ -226,14 +229,7 @@ contract ERC20 is IERC20, Ownable {
    * @param spender address The address which will spend the funds.
    * @return A uint256 specifying the amount of tokens still available for the spender.
    */
-  function allowance(
-    address owner,
-    address spender
-   )
-    public
-    view
-    returns (uint256)
-  {
+  function allowance(address owner, address spender) public view returns (uint256){
     return _allowed[owner][spender];
   }
 
@@ -271,14 +267,7 @@ contract ERC20 is IERC20, Ownable {
    * @param to address The address which you want to transfer to
    * @param value uint256 the amount of tokens to be transferred
    */
-  function transferFrom(
-    address from,
-    address to,
-    uint256 value
-  )
-    public
-    returns (bool)
-  {
+  function transferFrom(address from, address to, uint256 value) public returns (bool){
     require(value <= _allowed[from][msg.sender]);
     require(!isFrozen(from));
 
@@ -296,17 +285,10 @@ contract ERC20 is IERC20, Ownable {
    * @param spender The address which will spend the funds.
    * @param addedValue The amount of tokens to increase the allowance by.
    */
-  function increaseAllowance(
-    address spender,
-    uint256 addedValue
-  )
-    public
-    returns (bool)
-  {
+  function increaseAllowance(address spender, uint256 addedValue) public returns (bool){
     require(spender != address(0));
 
-    _allowed[msg.sender][spender] = (
-      _allowed[msg.sender][spender].add(addedValue));
+    _allowed[msg.sender][spender] = _allowed[msg.sender][spender].add(addedValue);
     emit Approval(msg.sender, spender, _allowed[msg.sender][spender]);
     return true;
   }
@@ -320,17 +302,10 @@ contract ERC20 is IERC20, Ownable {
    * @param spender The address which will spend the funds.
    * @param subtractedValue The amount of tokens to decrease the allowance by.
    */
-  function decreaseAllowance(
-    address spender,
-    uint256 subtractedValue
-  )
-    public
-    returns (bool)
-  {
+  function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool){
     require(spender != address(0));
 
-    _allowed[msg.sender][spender] = (
-      _allowed[msg.sender][spender].sub(subtractedValue));
+    _allowed[msg.sender][spender] = _allowed[msg.sender][spender].sub(subtractedValue);
     emit Approval(msg.sender, spender, _allowed[msg.sender][spender]);
     return true;
   }
@@ -350,6 +325,10 @@ contract ERC20 is IERC20, Ownable {
     emit Transfer(from, to, value);
   }
 
+  /**
+  * @param to The address to receive tokens.
+  * @param value The number of tokens to receive.
+  */
   function transferTokens(address to, uint256 value) external onlyOwner {
     require(value <= _balances[address(this)]);
     require(to != address(0));
@@ -358,17 +337,15 @@ contract ERC20 is IERC20, Ownable {
     _balances[to] = _balances[to].add(value);
     emit Transfer(address(this), to, value);
   }
-  
-  function airdrop(address[] to, uint256[] value) external onlyOwner {
-    uint total = 0;
 
+  /**
+  * @param to The array of addresses to receive tokens.
+  * @param value The array of numbers of tokens to receive.
+  */
+  function airdrop(address[] to, uint256[] value) external onlyOwner {
+    require(to.length == value.length);
     for (uint i = 0; i < to.length; i++) {
-      total = total.add(value[i]);
-      require(total <= _balances[address(this)]);
-      
-      _balances[address(this)] = _balances[address(this)].sub(value[i]);
-      _balances[to[i]] = _balances[to[i]].add(value[i]);
-      emit Transfer(address(this), to[i], value[i]);
+      _transfer(address(this), to[i], value[i]);
     }
   }
 }

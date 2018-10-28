@@ -1,7 +1,7 @@
 const UbaiCoin = artifacts.require('./UbaiCoin.sol')
 const utils = require('./helpers/Utils.js')
-    
-contract('Ubai Coin', function(accounts) {
+
+contract('Ubai Coin', function (accounts) {
 
   let token
   beforeEach(async function () {
@@ -25,6 +25,11 @@ contract('Ubai Coin', function(accounts) {
     it('verifies that total supply is 100 000 000 tokens', async function () {
       assert.equal(await token.totalSupply(), 100000000000000000000000000)
     })
+
+    it('verifies that total supply belongs to the contract address', async function () {
+      assert.equal((await token.balanceOf.call(token.address)), 100000000000000000000000000)
+    })
+
   })
 
 
@@ -42,7 +47,7 @@ contract('Ubai Coin', function(accounts) {
 
     it('verifies that ownership transfer has an OwnershipTransferred event', async () => {
       const res = await token.transferOwnership(accounts[1])
-      assert(res.logs.length > 0 && res.logs[0].event == 'OwnershipTransferred')
+      assert(res.logs.length > 0 && res.logs[0].event === 'OwnershipTransferred')
     })
 
     it('verifies that owner is 0x0 after renounce ownership ', async () => {
@@ -125,7 +130,7 @@ contract('Ubai Coin', function(accounts) {
       }
     })
   })
-  
+
 
   describe('ERC20 approve', () => {
     const owner = accounts[0]
@@ -141,7 +146,7 @@ contract('Ubai Coin', function(accounts) {
     it('verifies that an approval fires an Approval event', async () => {
       await token.transferTokens(owner, 500)
       const res = await token.approve(owner, 500)
-      assert(res.logs.length > 0 && res.logs[0].event == 'Approval');
+      assert(res.logs.length > 0 && res.logs[0].event === 'Approval');
     })
 
     it('should throw when attempting to transfer from another account more than the allowance', async () => {
@@ -164,10 +169,23 @@ contract('Ubai Coin', function(accounts) {
     it('verifies that transferring from another account fires a Transfer event', async () => {
       await token.transferTokens(owner, amount)
       await token.approve(to, amount)
+      assert.equal(await token.balanceOf.call(to), 0)
+
+      const allowance = await token.allowance.call(owner, to)
+      assert.equal(allowance, 500)
+
       const res = await token.transferFrom(owner, accounts[2], amount, { from: to })
-      assert(res.logs.length > 0 && res.logs[0].event == 'Transfer')
+      assert(res.logs.length > 0 && res.logs[0].event === 'Transfer')
+
+      const allowanceNew = await token.allowance.call(owner, to)
+      assert.equal(allowanceNew, 0)
+
+      assert.equal(await token.balanceOf.call(owner), 0)
+      assert.equal(await token.balanceOf.call(to), 0)
+      assert.equal(await token.balanceOf.call(accounts[2]), 500)
+
     });
-  
+
     it('verifies the new allowance after transferring from another account', async () => {
       await token.transferTokens(owner, amount)
       await token.approve(to, amount)
@@ -180,23 +198,25 @@ contract('Ubai Coin', function(accounts) {
       await token.transferTokens(owner, amount)
       await token.approve(to, 100)
       try {
-          await token.transferFrom(owner, accounts[2], 200, { from: to })
-          assert(false, "didn't throw")
+        await token.transferFrom(owner, accounts[2], 200, { from: to })
+        assert(false, "didn't throw")
       }
       catch (error) {
-          return utils.ensureException(error)
+        return utils.ensureException(error)
       }
     })
-  
+
     it('should throw when attempting to transfer from an invalid account', async () => {
       await token.transferTokens(owner, amount)
       await token.approve(to, 100)
       try {
-          await token.transferFrom(utils.zeroAddress, accounts[2], 50, { from: to })
-          assert(false, "didn't throw")
+        await token.transferFrom(utils.zeroAddress, accounts[2], 50, { from: to })
+        assert(false, "didn't throw")
       }
       catch (error) {
-          return utils.ensureException(error)
+        const allowance = await token.allowance.call(owner, to)
+        assert.equal(allowance, 100)
+        return utils.ensureException(error)
       }
     })
 
@@ -215,7 +235,7 @@ contract('Ubai Coin', function(accounts) {
         assert(false, "didn't throw")
       }
       catch (error) {
-          return utils.ensureException(error)
+        return utils.ensureException(error)
       }
     })
 
@@ -238,7 +258,7 @@ contract('Ubai Coin', function(accounts) {
     it('verifies that an increaseAllowance fires an Approval event', async () => {
       await token.transferTokens(owner, 500)
       const res = await token.increaseAllowance(owner, 500)
-      assert(res.logs.length > 0 && res.logs[0].event == 'Approval');
+      assert(res.logs.length > 0 && res.logs[0].event === 'Approval');
     })
 
     it('should throw when increaseAllowance to zero address', async () => {
@@ -248,7 +268,7 @@ contract('Ubai Coin', function(accounts) {
         assert(false, "didn't throw")
       }
       catch (error) {
-          return utils.ensureException(error)
+        return utils.ensureException(error)
       }
     })
 
@@ -266,24 +286,40 @@ contract('Ubai Coin', function(accounts) {
   describe('Airdrop', () => {
 
     it('verifies that airdrop works correctly', async () => {
-      await token.airdrop([accounts[1], accounts[2], accounts[3]], [4000, 1, 6000])
-  
-      const airdropFisrt = await token.balanceOf.call(accounts[1])
-      assert.equal(airdropFisrt.toNumber(), 4000)
-      const airdropSecond = await token.balanceOf.call(accounts[2])
-      assert.equal(airdropSecond.toNumber(), 1)
-      const airdropThird = await token.balanceOf.call(accounts[3])
-      assert.equal(airdropThird.toNumber(), 6000)
+      const numberOfAddresses = 400
+      let arrayOfAccounts = [];
+      let arrayOfAmountsOfTokens = [];
+      for (let i = 0; i < numberOfAddresses; i++) {
+        arrayOfAccounts.push(accounts[1])
+        arrayOfAmountsOfTokens.push(1)
+      }
+
+      // const gasEstimation = await token.airdrop.estimateGas(arrayOfAccounts, arrayOfAmountsOfTokens);
+      // console.log(gasEstimation)
+      await token.airdrop(arrayOfAccounts, arrayOfAmountsOfTokens)
+      const airdropFirst = await token.balanceOf.call(accounts[1])
+      assert.equal(airdropFirst.toNumber(), numberOfAddresses)
     })
 
-    it('verifies that airdrop will be revert, beacause contract hasnt enough tokens', async () => {
+    it('verifies that airdrop will be revert, because contract does not have enough tokens', async () => {
 
       try {
         await token.airdrop([accounts[1], accounts[2], accounts[3]], [100000000000000000000000000, 1, 6000])
         assert(false, "didn't throw")
       }
       catch (error) {
-          return utils.ensureException(error)
+        return utils.ensureException(error)
+      }
+    })
+
+    it('verifies that airdrop will be revert, because different lengths of arrays', async () => {
+
+      try {
+        await token.airdrop([accounts[1], accounts[2], accounts[3]], [100000000000000000000000000, 1])
+        assert(false, "didn't throw")
+      }
+      catch (error) {
+        return utils.ensureException(error)
       }
     })
 
@@ -294,9 +330,11 @@ contract('Ubai Coin', function(accounts) {
     const to = accounts[1]
     const amount = 100
 
-    it('verifies that freee logic works correctly', async () => {
+    it('verifies transferring during freezing and unfreezing', async () => {
       await token.transferTokens(to, amount)
-      await token.freeze(to, true, { from: owner })
+      assert.equal(await token.isFrozen(to), false)
+      await token.freeze(to, true)
+      assert.equal(await token.isFrozen(to), true)
       try {
         await token.transfer(to, amount, { from: to })
         assert(false, "didn't throw")
@@ -304,8 +342,16 @@ contract('Ubai Coin', function(accounts) {
       catch (error) {
         return utils.ensureException(error)
       }
+      await token.freeze(to, false)
+      assert.equal(await token.isFrozen(to), false)
+      try {
+        await token.transfer(to, amount, { from: to })
+      }
+      catch (error) {
+        assert(false, "ain't unfrozen")
+        return utils.ensureException(error)
+      }
     })
-
   })
-
 })
+
