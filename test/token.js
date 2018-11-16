@@ -10,12 +10,12 @@ contract('Ubai Coin', function (accounts) {
 
 
   describe('Ubai contract setup', function () {
-    it('verifies that coin name is UBAI COIN', async function () {
-      assert.equal(await token.name(), 'UBAI COIN')
+    it('verifies that coin name is UBI', async function () {
+      assert.equal(await token.name(), 'UBI')
     })
 
-    it('verifies that symbol is UBAI', async function () {
-      assert.equal(await token.symbol(), 'UBAI')
+    it('verifies that symbol is UBI', async function () {
+      assert.equal(await token.symbol(), 'UBI')
     })
 
     it('verifies that decimals is 18', async function () {
@@ -351,6 +351,108 @@ contract('Ubai Coin', function (accounts) {
         assert(false, "ain't unfrozen")
         return utils.ensureException(error)
       }
+    })
+  })
+
+  describe('Mint logic', () => {
+    const to = accounts[1]
+    const amount = 100
+
+    it('verifies that not owner cannot mint on the address', async () => {
+      try {
+        await token.mint(to, amount, { from: accounts[2] })
+        assert(false, "didn't throw")
+      }
+      catch (error) {
+        return utils.ensureException(error)
+      }
+    })
+
+    it('verifies minted tokens on the address and a mint event', async () => {
+      const initialBalance = await token.balanceOf.call(to)
+      const res = await token.mint(to, amount)
+      const newBalance = await token.balanceOf.call(to)
+      assert.equal(newBalance.toNumber(), initialBalance.toNumber() + amount)
+      assert(res.logs.length > 0 && res.logs[0].event === 'Mint')
+    })
+
+    it('verifies total supply and a mint event', async () => {
+      const initialSupply = await token.totalSupply()
+      const res = await token.mint(to, amount)
+      const newSupply = await token.totalSupply()
+      assert.equal(newSupply.toNumber(), initialSupply.toNumber() + amount)
+      assert(res.logs.length > 0 && res.logs[0].event === 'Mint')
+    })
+
+    it('verifies minted tokens on the address and a mint event during freezing', async () => {
+      await token.freeze(to, true)
+      const initialBalance = await token.balanceOf.call(to)
+      const res = await token.mint(to, amount)
+      const newBalance = await token.balanceOf.call(to)
+      assert.equal(newBalance.toNumber(), initialBalance.toNumber() + amount)
+      assert(res.logs.length > 0 && res.logs[0].event === 'Mint')
+    })
+
+    it('verifies total supply and a mint event during freezing', async () => {
+      await token.freeze(to, true)
+      const initialSupply = await token.totalSupply()
+      const res = await token.mint(to, amount)
+      const newSupply = await token.totalSupply()
+      assert.equal(newSupply.toNumber(), initialSupply.toNumber() + amount)
+      assert(res.logs.length > 0 && res.logs[0].event === 'Mint')
+    })
+  })
+
+  describe('Burn logic', () => {
+    const from = accounts[1]
+    const amount = 100
+
+    it('verifies that not owner cannot burn from the address', async () => {
+      try {
+        await token.burnFrom(from, amount, { from: accounts[2] })
+        assert(false, "didn't throw")
+      }
+      catch (error) {
+        return utils.ensureException(error)
+      }
+    })
+
+    it('verifies burnt tokens on the address and a burn event', async () => {
+      await token.mint(from, 3 * amount)
+      const initialBalance = await token.balanceOf.call(from)
+      const res = await token.burnFrom(from, amount)
+      const newBalance = await token.balanceOf.call(from)
+      assert.equal(newBalance.toNumber(), initialBalance.toNumber() - amount)
+      assert(res.logs.length > 0 && res.logs[0].event === 'Burn')
+    })
+
+    it('verifies total supply and a burn event', async () => {
+      await token.mint(from, 5 * amount)
+      const initialSupply = await token.totalSupply()
+      const res = await token.burnFrom(from, amount)
+      const newSupply = await token.totalSupply()
+      assert.equal(newSupply.toNumber(), initialSupply.toNumber() - amount)
+      assert(res.logs.length > 0 && res.logs[0].event === 'Burn')
+    })
+
+    it('verifies burnt tokens on the address and a burn event during freezing', async () => {
+      await token.freeze(from, true)
+      await token.mint(from, 3 * amount)
+      const initialBalance = await token.balanceOf.call(from)
+      const res = await token.burnFrom(from, amount)
+      const newBalance = await token.balanceOf.call(from)
+      assert.equal(newBalance.toNumber(), initialBalance.toNumber() - amount)
+      assert(res.logs.length > 0 && res.logs[0].event === 'Burn')
+    })
+
+    it('verifies total supply and a burn event during freezing', async () => {
+      await token.freeze(from, true)
+      await token.mint(from, 5 * amount)
+      const initialSupply = await token.totalSupply()
+      const res = await token.burnFrom(from, amount)
+      const newSupply = await token.totalSupply()
+      assert.equal(newSupply.toNumber(), initialSupply.toNumber() - amount)
+      assert(res.logs.length > 0 && res.logs[0].event === 'Burn')
     })
   })
 })
