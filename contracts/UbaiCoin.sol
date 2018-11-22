@@ -348,10 +348,39 @@ contract ERC20 is IERC20, Ownable {
       _transfer(address(this), to[i], value[i]);
     }
   }
+
+  event Mint(address indexed receiver, uint256 value);
+
+  /**
+   * @dev Function to mint tokens
+   * @param toAddress The address that will receive the minted tokens.
+   * @param value The amount of tokens to mint.
+   * @return A boolean that indicates if the operation was successful.
+   */
+  function mint(address toAddress, uint256 value) external onlyOwner returns (bool){
+    _balances[toAddress] = _balances[toAddress].add(value);
+    _totalSupply = _totalSupply.add(value);
+    emit Mint(toAddress, value);
+    return true;
+  }
+
+  event Burn(address indexed burner, uint256 value);
+
+  /**
+   * @dev Burns a specific amount of tokens from the target address and decrements allowance
+   * @param fromAddress address The address which you want to send tokens from
+   * @param value uint256 The amount of token to be burned
+   */
+  function burnFrom(address fromAddress, uint256 value) external onlyOwner returns (bool) {
+    _balances[fromAddress] = _balances[fromAddress].sub(value);
+    _totalSupply = _totalSupply.sub(value);
+    emit Burn(fromAddress, value);
+    return true;
+  }
 }
 
 contract UbaiCoin is ERC20 {
-  string constant public name = "UBAI COIN";
-  string constant public symbol = "UBAI";
+  string constant public name = "UBI";
+  string constant public symbol = "UBI";
   uint256 constant public decimals = 18;
 }
